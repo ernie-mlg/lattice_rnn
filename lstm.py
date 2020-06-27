@@ -18,12 +18,13 @@ class LSTMCell(nn.LSTMCell):
 
     def reset_parameters(self):
         """Orthogonal Initialization."""
-        init.orthogonal(self.weight_ih.data)
-        self.weight_hh.data.set_(torch.eye(self.hidden_size).repeat(4, 1))
+        init.orthogonal_(self.weight_ih.data)
+        with torch.no_grad():
+            self.weight_hh.set_(torch.eye(self.hidden_size).repeat(4, 1))
         # The bias is just set to zero vectors.
         if self.bias:
-            init.constant(self.bias_ih.data, val=0)
-            init.constant(self.bias_hh.data, val=0)
+            init.constant_(self.bias_ih.data, val=0)
+            init.constant_(self.bias_hh.data, val=0)
 
     def __repr__(self):
         """Rename."""
@@ -92,7 +93,7 @@ class LSTM(nn.Module):
         if len(in_edges) == 1:
             return in_hidden
         elif method == 'max':
-            posterior = torch.cat([lattice.edges[i, index] for i in in_edges])
+            posterior = torch.stack([lattice.edges[i, index] for i in in_edges]).view(-1, 1)
             _, max_idx = torch.max(posterior, 0)
             result = in_hidden[max_idx]
             return result
@@ -100,7 +101,7 @@ class LSTM(nn.Module):
             result = torch.mean(in_hidden, 0, keepdim=True)
             return result
         elif method == 'posterior':
-            posterior = torch.cat([lattice.edges[i, index] for i in in_edges])
+            posterior = torch.stack([lattice.edges[i, index] for i in in_edges])
             posterior = posterior*lattice.std[0, index] + lattice.mean[0, index]
             posterior.data.clamp_(min=1e-6)
             posterior = posterior/torch.sum(posterior)
@@ -111,7 +112,7 @@ class LSTM(nn.Module):
             return result
         elif method == 'attention':
             assert self.attention is not None, "build attention model first."
-            posterior = torch.cat([lattice.edges[i, index] for i in in_edges]).view(-1, 1)
+            posterior = torch.stack([lattice.edges[i, index] for i in in_edges]).view(-1, 1)
             posterior = posterior*lattice.std[0, index] + lattice.mean[0, index]
             context = torch.cat(
                 (posterior, torch.ones_like(posterior)*torch.mean(posterior),
@@ -132,19 +133,24 @@ class LSTM(nn.Module):
 
         node_hidden[lattice.nodes[0]] = state[0].view(1, -1)
         node_cell[lattice.nodes[0]] = state[1].view(1, -1)
+
         # The incoming and outgoing edges must be:
         # either a list of lists (for confusion network)
         # or a list of ints (for normal lattices)
         for each_node in lattice.nodes:
             # If the node is a child, compute its node state by combining all
             # the incoming edge states.
+            #print("Processing: %s"%each_node)
             if each_node in lattice.child_dict:
-                in_edges = [i for i in lattice.child_dict[each_node].values()]
+                #print("Processing child_dict")
+                in_edges = [i for i in lattice.child_dict[each_node].values()]                
                 if all(isinstance(item, list) for item in in_edges):
                     in_edges = [item for sublist in in_edges
                                 for item in sublist]
                 else:
                     assert all(isinstance(item, int) for item in in_edges)
+                in_edges_str = " ".join([str(a) for a in in_edges])
+                #print("In edges is: %s"%in_edges_str)
                 node_hidden[each_node] = self.combine_edges(
                     method, lattice, edge_hidden, in_edges)
                 node_cell[each_node] = self.combine_edges(
@@ -152,12 +158,16 @@ class LSTM(nn.Module):
 
             # If the node is a parent, compute each outgoing edge states
             if each_node in lattice.parent_dict:
+                #print("Processing parent_dict")
                 out_edges = lattice.parent_dict[each_node].values()
                 if all(isinstance(item, list) for item in out_edges):
                     out_edges = [item for sublist in out_edges
                                  for item in sublist]
                 else:
                     assert all(isinstance(item, int) for item in out_edges)
+                
+                out_edges_str = " ".join([str(a) for a in out_edges])
+                #print("Out edges is: %s"%out_edges_str)
                 for each_edge in out_edges:
                     old_state = (node_hidden[each_node], node_cell[each_node])
                     if each_edge in lattice.ignore:
@@ -236,9 +246,9 @@ class DNN(nn.Module):
             fc = self.get_fc(layer)
             init_method(fc.weight.data)
             if self.use_bias:
-                init.constant(fc.bias.data, val=0)
+                init.constant_(fc.bias.data, val=0)
         init_method(self.out.weight.data)
-        init.constant(self.out.bias.data, val=0)
+        init.constant_(self.out.bias.data, val=0)
 
     def forward(self, x):
         """Complete multi-layer DNN network."""
@@ -297,7 +307,7 @@ class Attention(nn.Module):
             fc = self.get_fc(layer)
             output = F.relu(fc(output))
         output = self.out(output).view(1, -1)
-        output = F.tanh(output)
+        output = torch.tanh(output)
         return F.softmax(output, dim=1)
 
 class Attention2(nn.Module):

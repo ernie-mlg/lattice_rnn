@@ -32,9 +32,13 @@ class Lattice:
         """Load the pre-processed lattice.
         Normalise to zero mean and unit variance if mean and std are provided.
         """
-        data = np.load(self.path)
+        data = np.load(self.path, allow_pickle=True)
+        #print("np loading path is %s"%self.path)
         self.nodes = list(data['topo_order'])
         self.edges = data['edge_data']
+        #print("length of node is %i"%len(self.nodes))
+        #print(self.edges.size)
+        #print("length of is child_2_parent is %i"%len(data['child_2_parent'].keys()))
         self.child_dict = data['child_2_parent'].item()
         self.parent_dict = data['parent_2_child'].item()
         # Backward compatibility

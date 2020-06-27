@@ -123,11 +123,11 @@ class Opts():
                             help='Optimizer type',
                             choices=['SGD', 'Adam'])
         # Model options
-        parser.add_argument('--init', default='kaiming_normal', type=str,
+        parser.add_argument('--init', default='kaiming_normal_', type=str,
                             help='Initialisation method for linear layers',
                             choices=['uniform', 'normal',
                                      'xavier_uniform', 'xavier_normal',
-                                     'kaiming_uniform', 'kaiming_normal'])
+                                     'kaiming_uniform', 'kaiming_normal_'])
         parser.add_argument('--arch', default='1-128-1-128', type=str,
                             help='Model architecture: '\
                                  'nLSTMLayer-LSTMSize-nFCLayer-nFCSize')

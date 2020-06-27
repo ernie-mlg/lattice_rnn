@@ -8,7 +8,8 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 import torch.multiprocessing as mp
-from torch.nn.utils import clip_grad_norm
+mp.set_sharing_strategy('file_system')
+from torch.nn.utils import clip_grad_norm_
 import utils, criterion
 
 class Trainer():
@@ -90,7 +91,7 @@ class Trainer():
             one_best_pred = Variable(torch.Tensor(pred_onebest))
             one_best_ref = Variable(torch.Tensor(ref_onebest))
             loss_fn = criterion.create_criterion()
-            loss = loss_fn(one_best_pred, one_best_ref).data[0]
+            loss = loss_fn(one_best_pred, one_best_ref).data.item()
         return loss, count, pred_onebest, ref_onebest
 
     def xent(self, output, ignore, reference):
@@ -105,7 +106,7 @@ class Trainer():
         all_pred_t = Variable(torch.Tensor(all_pred))
         all_ref_t = Variable(torch.Tensor(all_ref))
         loss_fn = criterion.create_criterion()
-        loss = loss_fn(all_pred_t, all_ref_t).data[0]
+        loss = loss_fn(all_pred_t, all_ref_t).data.item()
         return loss, count, all_pred, all_ref
 
     @staticmethod
@@ -173,7 +174,7 @@ class Trainer():
             if update:
                 total_loss = loss_onebest if self.opt.onebest else loss
                 total_loss.backward()
-                clip_grad_norm(self.model.parameters(), self.opt.clip)
+                clip_grad_norm_(self.model.parameters(), self.opt.clip)
                 self.optimizer.step()
 
             if self.opt.onebest:
@@ -185,9 +186,11 @@ class Trainer():
                 all_loss, all_count, all_pred, all_ref = self.xent(
                     output.data.view(-1), lattice.ignore, target.target)
 
-            results[index] = [(loss.data[0]*count, count),
-                              (loss_onebest.data[0]*count_onebest, count_onebest),
+            results[index] = [(loss.data.item()*count, count),
+                              (loss_onebest.data.item()*count_onebest, count_onebest),
                               (all_pred, all_ref)]
+            #print("For index %i, result is"%index)
+            #print(results[index])
 
     def train(self, train_loader, epoch, val_loss):
         """Training mode."""
