@@ -21,12 +21,12 @@ class Opts():
 
         # Customized parameters for dataset
         if 'onebest' in self.args.dataset:
-            self.args.inputSize = 52
+            self.args.inputSize = 55
             self.args.onebest = True
         elif self.args.dataset.startswith('lattice'):
-            self.args.inputSize = 54
+            self.args.inputSize = 55
         elif self.args.dataset.startswith('confnet'):
-            self.args.inputSize = 52
+            self.args.inputSize = 55
         else:
             raise ValueError
 
