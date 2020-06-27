@@ -78,13 +78,13 @@ def plot_roc(fpr, tpr, area, name, dst_dir):
     for (x_val, y_val, a_val, string) in zip(fpr, tpr, area, name):
         label = string + ' (AUC = %0.4f)' %a_val
         plt.plot(x_val, y_val, label=label)
-    plt.legend(loc='lower right')
+    plt.legend(loc='upper left',bbox_to_anchor=(1.04,1))
     plt.plot([0, 1], [0, 1], 'r--')
     plt.xlim([0, 1])
     plt.ylim([0, 1])
     plt.ylabel('True Positive Rate')
     plt.xlabel('False Positive Rate')
-    plt.savefig(os.path.join(dst_dir, 'roc.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(dst_dir, 'roc.png'), bbox_inches='tight')
     plt.close()
 
 def plot_pr(precision, recall, area, name, dst_dir):
@@ -103,12 +103,12 @@ def plot_pr(precision, recall, area, name, dst_dir):
     for (x_val, y_val, a_val, string) in zip(recall, precision, area, name):
         label = string + ' (AUC = %0.4f)' %a_val
         plt.plot(x_val, y_val, label=label)
-    plt.legend(loc='lower right')
+    plt.legend(loc='upper left',bbox_to_anchor=(1.04,1))
     plt.xlim([0, 1])
     plt.ylim([0, 1])
     plt.ylabel('Precision')
     plt.xlabel('Recall')
-    plt.savefig(os.path.join(dst_dir, 'pr.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(dst_dir, 'pr.png'), bbox_inches='tight')
     plt.close()
 
 def plot_det(fnr, fpr, name, dst_dir):

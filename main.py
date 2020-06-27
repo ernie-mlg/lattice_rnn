@@ -50,20 +50,34 @@ def main():
         utils.print_color_msg("==> Testing:")
         print("".ljust(4) + "=> Epoch %i" %(start_epoch-1))
         _, prediction, reference, post = trainer.test(test_loader, start_epoch-1)
-        if opt.loss == 'BCELogit':
-            prediction = F.sigmoid(torch.Tensor(prediction)).numpy()
+        prediction = F.sigmoid(torch.Tensor(prediction)).numpy()
+        np.savez(os.path.join(opt.resume, 'result.npz'),
+                 prediction=prediction, reference=reference, posteriors=post)
         nce = evaluation.nce(reference, prediction)
+        nce_post = evaluation.nce(reference, post)
         precision, recall, area = evaluation.pr(reference, prediction)
+        fpr, tpr, area2 = evaluation.roc(reference, prediction)
         precision_bl, recall_bl, area_bl = evaluation.pr(reference, post)
+        fpr_bl, tpr_bl, area2_bl = evaluation.roc(reference, post)
         utils.print_color_msg(
-            "".ljust(7) + "NCE: %.4f. AUC(PR): %.4f. AUC(BL): %.4f" \
-            %(nce, area, area_bl))
-        trainer.logger['test'].write('NCE: %f\nAUC(PR): %f\n' %(nce, area))
+            "".ljust(7) + "NCE: %.4f. AUC(PR): %.4f." \
+            %(nce, area2))
+        utils.print_color_msg(
+            "".ljust(7) + "POST NCE: %.4f. AUC(PR): %.4f." \
+            %(nce_post, area2_bl))
+
+
+        trainer.logger['test'].write('NCE: %f\nAUC(PR): %f\n' %(nce, area2))
         evaluation.plot_pr([precision, precision_bl], [recall, recall_bl],
                            [area, area_bl], ['BiRNN', 'posterior'],
                            opt.resume)
-        np.savez(os.path.join(opt.resume, 'result.npz'),
-                 prediction=prediction, reference=reference, posteriors=post)
+        evaluation.plot_roc([fpr, fpr_bl], [tpr, tpr_bl],
+                           [area2, area2_bl], ['BiRNN', 'posterior'],
+                           opt.resume)
+        
+        #evaluation.plot_pr([precision], [recall], [area], ['BiRNN'], opt.resume)
+        #evaluation.plot_roc([fpr], [tpr], [area2], ['BiRNN'], opt.resume)
+        
         sys.exit()
 
     utils.print_color_msg("==> Training:")
@@ -88,10 +102,12 @@ def main():
         prediction = F.sigmoid(torch.Tensor(prediction)).numpy()
         nce = evaluation.nce(reference, prediction)
         precision, recall, area = evaluation.pr(reference, prediction)
+        fpr, tpr, area2 = evaluation.roc(reference, prediction)
         utils.print_color_msg(
             "".ljust(7) + "NCE: %.4f. AUC(PR): %.4f" %(nce, area))
         trainer.logger['test'].write('NCE: %f\nAUC(PR): %f\n' %(nce, area))
         evaluation.plot_pr([precision], [recall], [area], ['BiRNN'], opt.resume)
+        evaluation.plot_pr([fpr], [tpr], [area2], ['BiRNN'], opt.resume)
 
         # Flush write out and reset pointer
         for open_file in trainer.logger.values():
