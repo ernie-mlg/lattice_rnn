@@ -98,7 +98,7 @@ def main():
 
     if not opt.debug:
         utils.print_color_msg("==> Testing:")
-        _, prediction, reference, _ = trainer.test(test_loader, opt.nEpochs)
+        _, prediction, reference, post = trainer.test(test_loader, opt.nEpochs)
         prediction = F.sigmoid(torch.Tensor(prediction)).numpy()
         nce = evaluation.nce(reference, prediction)
         precision, recall, area = evaluation.pr(reference, prediction)
@@ -108,7 +108,8 @@ def main():
         trainer.logger['test'].write('NCE: %f\nAUC(PR): %f\n' %(nce, area))
         evaluation.plot_pr([precision], [recall], [area], ['BiRNN'], opt.resume)
         evaluation.plot_pr([fpr], [tpr], [area2], ['BiRNN'], opt.resume)
-
+        np.savez(os.path.join(opt.resume, 'result.npz'),
+                 prediction=prediction, reference=reference, posteriors=post)
         # Flush write out and reset pointer
         for open_file in trainer.logger.values():
             open_file.flush()
